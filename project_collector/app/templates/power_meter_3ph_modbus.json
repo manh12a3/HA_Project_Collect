@@ -1,0 +1,173 @@
+{
+ "name": "Power meter 3-phase (Modbus TCP, 16 points)",
+ "protocol": "modbus",
+ "model": "Power Meter (Modbus TCP)",
+ "description": "3-phase power meter via Modbus TCP gateway (input registers, float32): V L-N / L-L, I1-I3, kW, PF, Hz, kWh. Used for MFM384 / MF383 at site HQ.",
+ "defaults": {
+  "port": 502,
+  "unit_id": 6,
+  "snmp_version": null,
+  "scan_interval": 30
+ },
+ "points": [
+  {
+   "address": 0,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "v1n_voltage",
+   "label": "V1N Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 2,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "v2n_voltage",
+   "label": "V2N Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 4,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "v3n_voltage",
+   "label": "V3N Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 6,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "average_ln_voltage",
+   "label": "Average LN Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 8,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "v12_voltage",
+   "label": "V12 Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 10,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "v23_voltage",
+   "label": "V23 Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 12,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "v31_voltage",
+   "label": "V31 Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 14,
+   "data_type": "float32",
+   "device_class": "voltage",
+   "input_type": "input",
+   "key": "average_ll_voltage",
+   "label": "Average LL Voltage",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "address": 16,
+   "data_type": "float32",
+   "device_class": "current",
+   "input_type": "input",
+   "key": "current_i1",
+   "label": "Current I1",
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "address": 18,
+   "data_type": "float32",
+   "device_class": "current",
+   "input_type": "input",
+   "key": "current_i2",
+   "label": "Current I2",
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "address": 20,
+   "data_type": "float32",
+   "device_class": "current",
+   "input_type": "input",
+   "key": "current_i3",
+   "label": "Current I3",
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "address": 22,
+   "data_type": "float32",
+   "device_class": "current",
+   "input_type": "input",
+   "key": "average_current_i",
+   "label": "Average Current I",
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "address": 42,
+   "data_type": "float32",
+   "device_class": "power",
+   "input_type": "input",
+   "key": "total_active_power",
+   "label": "Total Active Power",
+   "state_class": "measurement",
+   "unit": "kW"
+  },
+  {
+   "address": 54,
+   "data_type": "float32",
+   "device_class": "power_factor",
+   "input_type": "input",
+   "key": "power_factor_average",
+   "label": "Power Factor Average",
+   "state_class": "measurement"
+  },
+  {
+   "address": 56,
+   "data_type": "float32",
+   "device_class": "frequency",
+   "input_type": "input",
+   "key": "frequency",
+   "label": "Frequency",
+   "state_class": "measurement",
+   "unit": "Hz"
+  },
+  {
+   "address": 58,
+   "data_type": "float32",
+   "device_class": "energy",
+   "input_type": "input",
+   "key": "total_active_energy",
+   "label": "Total Active Energy",
+   "state_class": "total_increasing",
+   "unit": "kWh"
+  }
+ ]
+}

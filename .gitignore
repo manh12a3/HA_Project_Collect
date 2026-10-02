@@ -1,0 +1,11 @@
+# Cấu hình thiết bị thật của từng site (chứa community SNMP) - KHÔNG đưa lên Git
+devices.json
+devices.*.json
+!devices.*.example.json
+secrets.yaml
+*.pem
+*.key
+**/__pycache__/
+*.pyc
+*.bak*
+*.tmp

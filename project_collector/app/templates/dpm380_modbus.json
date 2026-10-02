@@ -1,0 +1,204 @@
+{
+ "name": "DPM380 power meter (Modbus RTU via gateway)",
+ "protocol": "modbus",
+ "model": "DPM380",
+ "description": "From the old Project integration - not yet verified on a real device, test before use.",
+ "defaults": {
+  "port": 502,
+  "unit_id": 1,
+  "snmp_version": null,
+  "scan_interval": 30
+ },
+ "points": [
+  {
+   "key": "voltage_l1",
+   "label": "Voltage L1",
+   "address": 4034,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "V",
+   "device_class": "voltage",
+   "state_class": "measurement"
+  },
+  {
+   "key": "voltage_l2",
+   "label": "Voltage L2",
+   "address": 4036,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "V",
+   "device_class": "voltage",
+   "state_class": "measurement"
+  },
+  {
+   "key": "voltage_l3",
+   "label": "Voltage L3",
+   "address": 4038,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "V",
+   "device_class": "voltage",
+   "state_class": "measurement"
+  },
+  {
+   "key": "current_l1",
+   "label": "Current L1",
+   "address": 4020,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "scale": 0.001,
+   "round": 3,
+   "unit": "A",
+   "device_class": "current",
+   "state_class": "measurement"
+  },
+  {
+   "key": "current_l2",
+   "label": "Current L2",
+   "address": 4022,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "scale": 0.001,
+   "round": 3,
+   "unit": "A",
+   "device_class": "current",
+   "state_class": "measurement"
+  },
+  {
+   "key": "current_l3",
+   "label": "Current L3",
+   "address": 4024,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "scale": 0.001,
+   "round": 3,
+   "unit": "A",
+   "device_class": "current",
+   "state_class": "measurement"
+  },
+  {
+   "key": "total_real_power",
+   "label": "Total Real Power",
+   "address": 4012,
+   "input_type": "holding",
+   "data_type": "int32",
+   "unit": "W",
+   "device_class": "power",
+   "state_class": "measurement"
+  },
+  {
+   "key": "total_reactive_power",
+   "label": "Total Reactive Power",
+   "address": 4016,
+   "input_type": "holding",
+   "data_type": "int32",
+   "unit": "var",
+   "device_class": "reactive_power",
+   "state_class": "measurement"
+  },
+  {
+   "key": "total_apparent_power",
+   "label": "Total Apparent Power",
+   "address": 4014,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "unit": "VA",
+   "device_class": "apparent_power",
+   "state_class": "measurement"
+  },
+  {
+   "key": "total_energy",
+   "label": "Total Energy (Import)",
+   "address": 4002,
+   "input_type": "holding",
+   "data_type": "uint32",
+   "unit": "kWh",
+   "device_class": "energy",
+   "state_class": "total_increasing"
+  },
+  {
+   "key": "frequency",
+   "label": "Frequency",
+   "address": 4019,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.01,
+   "round": 2,
+   "unit": "Hz",
+   "device_class": "frequency",
+   "state_class": "measurement"
+  },
+  {
+   "key": "thd_voltage_l1",
+   "label": "THD Voltage L1",
+   "address": 4085,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "%",
+   "state_class": "measurement"
+  },
+  {
+   "key": "thd_voltage_l2",
+   "label": "THD Voltage L2",
+   "address": 4086,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "%",
+   "state_class": "measurement"
+  },
+  {
+   "key": "thd_voltage_l3",
+   "label": "THD Voltage L3",
+   "address": 4087,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "%",
+   "state_class": "measurement"
+  },
+  {
+   "key": "thd_current_l1",
+   "label": "THD Current L1",
+   "address": 4082,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "%",
+   "state_class": "measurement"
+  },
+  {
+   "key": "thd_current_l2",
+   "label": "THD Current L2",
+   "address": 4083,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "%",
+   "state_class": "measurement"
+  },
+  {
+   "key": "thd_current_l3",
+   "label": "THD Current L3",
+   "address": 4084,
+   "input_type": "holding",
+   "data_type": "uint16",
+   "scale": 0.1,
+   "round": 1,
+   "unit": "%",
+   "state_class": "measurement"
+  }
+ ]
+}

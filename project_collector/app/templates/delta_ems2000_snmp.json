@@ -1,0 +1,52 @@
+{
+ "name": "Delta InsightPower EMS2000 (SNMP)",
+ "protocol": "snmp",
+ "model": "Generic",
+ "description": "Delta EnviroStation EMS2000 with 2x EMS1000 temperature / humidity probes.",
+ "defaults": {
+  "port": 161,
+  "unit_id": null,
+  "snmp_version": "1",
+  "scan_interval": 30
+ },
+ "points": [
+  {
+   "device_class": "temperature",
+   "key": "ems1000_01_temp",
+   "label": "EMS1000_01_tem",
+   "oid": "1.3.6.1.4.1.2254.2.41.3.2.1.2.1",
+   "round": 2,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "°C"
+  },
+  {
+   "device_class": "temperature",
+   "key": "ems1000_02_temp",
+   "label": "EMS1000_02_temp",
+   "oid": "1.3.6.1.4.1.2254.2.41.3.2.1.2.2",
+   "round": 2,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "°C"
+  },
+  {
+   "device_class": "humidity",
+   "key": "ems1000_01_humidity",
+   "label": "EMS1000_01_humidity",
+   "oid": "1.3.6.1.4.1.2254.2.41.3.2.1.3.1",
+   "round": 2,
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "device_class": "humidity",
+   "key": "ems1000_02_humidity",
+   "label": "EMS1000_02_humidity",
+   "oid": "1.3.6.1.4.1.2254.2.41.3.2.1.3.2",
+   "round": 2,
+   "state_class": "measurement",
+   "unit": "%"
+  }
+ ]
+}

@@ -1,0 +1,48 @@
+{
+ "name": "Temperature / humidity / light sensor (Modbus TCP)",
+ "protocol": "modbus",
+ "model": "Generic",
+ "description": "3-point environment sensor (HumTemLight) via Modbus TCP gateway.",
+ "defaults": {
+  "port": 10502,
+  "unit_id": 1,
+  "snmp_version": null,
+  "scan_interval": 30
+ },
+ "points": [
+  {
+   "address": 0,
+   "data_type": "int16",
+   "device_class": "humidity",
+   "input_type": "input",
+   "key": "humidity",
+   "label": "Humidity",
+   "round": 2,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "address": 1,
+   "data_type": "int16",
+   "device_class": "temperature",
+   "input_type": "input",
+   "key": "temperature",
+   "label": "Temperature",
+   "round": 2,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "°C"
+  },
+  {
+   "address": 2,
+   "data_type": "int16",
+   "input_type": "input",
+   "key": "light",
+   "label": "Light",
+   "round": 2,
+   "state_class": "measurement",
+   "unit": "Lux"
+  }
+ ]
+}

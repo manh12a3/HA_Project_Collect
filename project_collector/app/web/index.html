@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Collector</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --fg:#1d2330; --muted:#6b7280; --line:#e3e6eb; --pri:#0b6bcb; --ok:#1a7f37; --warn:#b26a00; --bad:#c62828; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --card:#1b2027; --fg:#e6e9ee; --muted:#9aa3ae; --line:#2c333d; --pri:#4ea1ff; --ok:#3fb950; --warn:#e3a008; --bad:#f06262; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--fg); }
+  header { display:flex; align-items:center; gap:16px; padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; }
+  header .meta { color:var(--muted); font-size:12px; }
+  nav { display:flex; gap:4px; margin-left:auto; }
+  nav button { background:none; border:none; padding:8px 12px; border-radius:6px; color:var(--muted); cursor:pointer; font:inherit; }
+  nav button.on { background:var(--bg); color:var(--fg); font-weight:600; }
+  main { padding:16px; max-width:1500px; margin:0 auto; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .grow { flex:1; }
+  button.b { background:var(--pri); color:#fff; border:none; border-radius:6px; padding:7px 12px; cursor:pointer; font:inherit; }
+  button.s { background:none; border:1px solid var(--line); color:var(--fg); border-radius:6px; padding:6px 10px; cursor:pointer; font:inherit; }
+  button.d { background:none; border:1px solid var(--bad); color:var(--bad); border-radius:6px; padding:6px 10px; cursor:pointer; font:inherit; }
+  button:disabled { opacity:.5; cursor:default; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { font-size:12px; color:var(--muted); font-weight:600; white-space:nowrap; }
+  .pts input, .pts select { width:100%; min-width:60px; padding:4px 5px; font:12px ui-monospace,Consolas,monospace; border:1px solid var(--line); border-radius:4px; background:var(--bg); color:var(--fg); }
+  .pts td { padding:3px 4px; }
+  .pts .val { font:12px ui-monospace,Consolas,monospace; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .scroll { overflow-x:auto; }
+  label.f { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); min-width:150px; }
+  label.f input, label.f select { padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); font:inherit; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:20px; font-size:12px; border:1px solid var(--line); }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .muted { color:var(--muted); }
+  .msg { padding:8px 12px; border-radius:6px; margin-bottom:10px; }
+  .msg.err { background:rgba(198,40,40,.12); color:var(--bad); } .msg.inf { background:rgba(11,107,203,.10); }
+  .switch { position:relative; width:38px; height:20px; display:inline-block; }
+  .switch input { display:none; } .switch span { position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:.2s; }
+  .switch span:before { content:""; position:absolute; width:16px; height:16px; left:2px; top:2px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + span { background:var(--ok); } .switch input:checked + span:before { transform:translateX(18px); }
+  dialog { border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--fg); max-width:760px; width:94%; }
+  dialog::backdrop { background:rgba(0,0,0,.35); }
+  textarea { width:100%; min-height:160px; font:12px ui-monospace,Consolas,monospace; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px; }
+  .tpl { padding:8px 10px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; cursor:pointer; }
+  .tpl:hover { border-color:var(--pri); }
+  @media (max-width:700px) { nav { margin-left:0; } label.f { min-width:120px; } }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Project Collector</h1><div class="meta" id="meta"></div></div>
+  <nav><button data-tab="devices" class="on">Devices</button><button data-tab="scan">Scan</button><button data-tab="templates">Templates</button></nav>
+</header>
+<main>
+  <div id="msg"></div>
+  <section id="tab-devices"></section>
+  <section id="tab-editor" hidden></section>
+  <section id="tab-scan" hidden></section>
+  <section id="tab-templates" hidden></section>
+</main>
+
+<dialog id="dlg"></dialog>
+<datalist id="dc-list">
+  <option>temperature</option><option>humidity</option><option>voltage</option><option>current</option><option>power</option>
+  <option>apparent_power</option><option>reactive_power</option><option>power_factor</option><option>energy</option><option>frequency</option>
+  <option>battery</option><option>duration</option><option>illuminance</option><option>pressure</option><option>enum</option>
+</datalist>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = async (method, path, body) => {
+  const r = await fetch(path, {method, headers: {"Content-Type": "application/json"}, body: body ? JSON.stringify(body) : undefined});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+};
+const msg = (text, type = "inf") => { $("#msg").innerHTML = text ? `<div class="msg ${type}">${esc(text)}</div>` : ""; if (text && type === "inf") setTimeout(() => { if ($("#msg").textContent === text) msg(""); }, 6000); };
+const ago = (t) => { if (!t) return "never"; const s = Math.round(Date.now() / 1000 - t); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`; };
+
+const COLS = {
+  common: [["key", "Key*"], ["label", "Label"]],
+  snmp: [["oid", "OID*"]],
+  modbus: [["address", "Address*"], ["input_type", "Type"], ["data_type", "Data type"], ["word_order", "Word order"]],
+  bacnet: [["object_type", "Object type*"], ["object_instance", "Instance*"], ["property_name", "Property"]],
+  tail: [["scale", "Scale"], ["round", "Round"], ["unit", "Unit"], ["device_class", "Device class"], ["state_class", "State class"]],
+};
+const SELECTS = {
+  input_type: ["holding", "input", "coil", "discrete"],
+  data_type: ["uint16", "int16", "uint32", "int32", "float32", "uint64", "int64", "float64"],
+  word_order: ["abcd", "cdab"],
+  state_class: ["", "measurement", "total", "total_increasing"],
+};
+const KNOWN = new Set(["key","label","oid","address","input_type","data_type","word_order","object_type","object_instance","property_name","scale","round","unit","device_class","state_class","enabled","entity_id"]);
+const CSV_COLS = ["key","label","oid","address","input_type","data_type","word_order","object_type","object_instance","property_name","scale","round","unit","device_class","state_class","enabled","extra"];
+
+let state = { tab: "devices", devices: [], templates: [], edit: null, values: {}, tests: {} };
+
+// ---------------- tabs ----------------
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.tab));
+function show(tab) {
+  state.tab = tab;
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab || (tab === "editor" && b.dataset.tab === "devices")));
+  for (const t of ["devices", "editor", "scan", "templates"]) $(`#tab-${t}`).hidden = t !== tab;
+  msg("");
+  if (tab === "devices") loadDevices();
+  if (tab === "scan") loadScan();
+  if (tab === "templates") loadTemplates();
+}
+
+// ---------------- devices list ----------------
+async function loadDevices() {
+  try { state.devices = await api("GET", "api/devices"); } catch (e) { return msg(e.message, "err"); }
+  const rows = state.devices.map(d => {
+    const st = !d.enabled ? `<span class="muted">Off</span>` : d.points_ok === d.points_count && d.points_count ? `<span class="ok">● ${d.points_ok}/${d.points_count}</span>` : d.points_ok ? `<span class="warn">● ${d.points_ok}/${d.points_count}</span>` : `<span class="bad">● 0/${d.points_count}</span>`;
+    const addr = d.protocol === "modbus" ? `${esc(d.host)}:${d.port} · unit ${esc(d.unit_id)}` : d.protocol === "snmp" ? `${esc(d.host)}:${d.port} · v${esc(d.snmp_version || "2c")}` : `${esc(d.host)} · dev ${esc(d.device_instance)}`;
+    return `<tr><td><b>${esc(d.name)}</b><div class="muted" style="font-size:12px">${esc(d.model || "")}</div></td>
+      <td><span class="pill">${esc(d.protocol.toUpperCase())}</span></td><td>${addr}</td><td>${d.scan_interval}s</td>
+      <td>${st}<div class="muted" style="font-size:12px">${d.enabled ? ago(d.last_read) : ""}${d.last_error ? " · " + esc(d.last_error) : ""}</div></td>
+      <td><label class="switch" title="Polling"><input type="checkbox" ${d.enabled ? "checked" : ""} onchange="togglePolling('${d.id}', this.checked)"><span></span></label></td>
+      <td style="white-space:nowrap"><button class="s" onclick="editDevice('${d.id}')">Edit</button> <button class="d" onclick="deleteDevice('${d.id}')">Delete</button></td></tr>`;
+  }).join("");
+  $("#tab-devices").innerHTML = `<div class="card"><div class="row" style="margin-bottom:10px"><b class="grow">${state.devices.length} devices</b>
+    <button class="s" onclick="loadDevices()">Refresh</button><button class="b" onclick="newDevice()">+ New device</button></div>
+    <div class="scroll"><table><thead><tr><th>Device</th><th>Protocol</th><th>Address</th><th>Interval</th><th>Status</th><th>Polling</th><th></th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="7" class="muted">No devices yet - add one with "+ New device" or from the Scan tab.</td></tr>`}</tbody></table></div></div>`;
+}
+async function togglePolling(id, on) {
+  const d = state.devices.find(x => x.id === id);
+  if (on && d && d.protocol === "modbus" && !confirm(`Start polling "${d.name}" (Modbus)?\n\nMake sure NO other system (old Home Assistant, SCADA...) polls the same RS485 line / gateway, otherwise readings collide and produce garbage values.`)) return loadDevices();
+  try { await api("POST", `api/devices/${id}/polling`, {on}); msg(`Polling ${on ? "started" : "stopped"}: ${d ? d.name : id}`); } catch (e) { msg(e.message, "err"); }
+  loadDevices();
+}
+async function deleteDevice(id) {
+  const d = state.devices.find(x => x.id === id);
+  if (!confirm(`Delete device "${d.name}"?\n\nPolling stops and its ${d.points_count} entities are REMOVED from Home Assistant (their history stays in the recorder).`)) return;
+  try { await api("DELETE", `api/devices/${id}`); msg(`Deleted ${d.name}`); } catch (e) { msg(e.message, "err"); }
+  loadDevices();
+}
+
+// ---------------- new device (template picker) ----------------
+async function newDevice(prefill = {}) {
+  try { state.templates = await api("GET", "api/templates"); } catch (e) { return msg(e.message, "err"); }
+  const proto = prefill.protocol;
+  const list = state.templates.filter(t => !proto || t.protocol === proto);
+  $("#dlg").innerHTML = `<h3 style="margin-top:0">New device${prefill.host ? " - " + esc(prefill.host) : ""}</h3>
+    <p class="muted">Choose a template (points are copied) or start empty.</p>
+    <div class="tpl" onclick="startEditor(null, ${esc(JSON.stringify(JSON.stringify(prefill)))})"><b>Empty device</b> <span class="muted">- add points manually or import CSV</span></div>
+    ${list.map((t, i) => `<div class="tpl" onclick="useTemplate(${state.templates.indexOf(t)}, ${esc(JSON.stringify(JSON.stringify(prefill)))})">
+      <b>${esc(t.name)}</b> <span class="pill">${esc(t.protocol.toUpperCase())}</span> <span class="muted">${(t.points || []).length} points${t.builtin ? "" : " · user template"}</span>
+      <div class="muted" style="font-size:12px">${esc(t.description || "")}</div></div>`).join("")}
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="s" onclick="$('#dlg').close()">Cancel</button></div>`;
+  $("#dlg").showModal();
+}
+function useTemplate(i, prefillJson) {
+  const t = state.templates[i], pre = JSON.parse(prefillJson);
+  const dflt = t.defaults || {};
+  const cfg = {protocol: t.protocol, model: t.model || t.name, port: dflt.port, unit_id: dflt.unit_id, snmp_version: dflt.snmp_version || (t.protocol === "snmp" ? "2c" : undefined),
+    scan_interval: dflt.scan_interval || 30, enabled: true, points: JSON.parse(JSON.stringify(t.points || [])), ...pre};
+  $("#dlg").close();
+  startEditor(null, JSON.stringify(cfg));
+}
+
+// ---------------- editor ----------------
+async function editDevice(id) {
+  try { const d = await api("GET", `api/devices/${id}`); state.values = d.values || {}; startEditor(d); } catch (e) { msg(e.message, "err"); }
+}
+function startEditor(dev, cfgJson) {
+  if ($("#dlg").open) $("#dlg").close();
+  if (!dev) { state.values = {}; }
+  const base = dev || {protocol: "snmp", snmp_version: "2c", scan_interval: 30, enabled: true, points: [], ...(cfgJson ? JSON.parse(cfgJson) : {})};
+  state.edit = JSON.parse(JSON.stringify(base));
+  state.edit._isNew = !dev;
+  state.tests = {};
+  show("editor");
+  renderEditor();
+}
+function field(k, label, type = "text", extra = "") {
+  const v = state.edit[k] ?? "";
+  return `<label class="f">${label}<input type="${type}" value="${esc(v)}" ${extra} oninput="state.edit['${k}']=this.value"></label>`;
+}
+function renderEditor() {
+  const e = state.edit, p = e.protocol;
+  const cols = [...COLS.common, ...COLS[p], ...COLS.tail];
+  const rows = (e.points || []).map((pt, i) => {
+    const t = state.tests[pt.key], live = state.values[pt.key];
+    const val = t ? (t.error ? `<span class="bad" title="${esc(t.error)}">✖ ${esc(t.error)}</span>` : `<span class="ok" title="raw: ${esc(t.raw ?? "")}">${esc(t.value)}</span>`)
+      : (live != null ? `<span class="muted">${esc(live)}</span>` : "");
+    const extra = Object.fromEntries(Object.entries(pt).filter(([k]) => !KNOWN.has(k)));
+    return `<tr>${cols.map(([k]) => `<td>${cell(i, k, pt[k])}</td>`).join("")}
+      <td><input value="${esc(Object.keys(extra).length ? JSON.stringify(extra) : "")}" placeholder='{"map":{"1":"On"}}' title="Advanced JSON: map, bit, on, off, format, valid_min" onchange="setExtra(${i}, this.value)" style="min-width:140px"></td>
+      <td style="text-align:center"><input type="checkbox" ${pt.enabled === false ? "" : "checked"} title="Entity enabled in HA" onchange="state.edit.points[${i}].enabled = this.checked ? undefined : false" style="width:auto"></td>
+      <td class="val">${val}</td>
+      <td style="white-space:nowrap"><button class="s" title="Test this point" onclick="testPoints(['${esc(pt.key)}'])">▶</button> <button class="s" title="Duplicate" onclick="dupPoint(${i})">⧉</button> <button class="d" title="Delete point" onclick="delPoint(${i})">✕</button></td></tr>`;
+  }).join("");
+  $("#tab-editor").innerHTML = `
+    <div class="card"><div class="row" style="margin-bottom:10px"><b class="grow">${e._isNew ? "New device" : "Edit device: " + esc(e.name)}</b>
+      <button class="s" onclick="show('devices')">Cancel</button>${e._isNew ? "" : `<button class="s" onclick="saveTemplate()">Save as template</button>`}
+      <button class="b" onclick="saveDevice()">Save</button></div>
+      <div class="row">
+        ${field("name", "Device name*")}${field("model", "Model")}
+        <label class="f">Protocol<select ${e._isNew ? "" : "disabled"} onchange="state.edit.protocol=this.value; renderEditor()">${["snmp","modbus","bacnet"].map(x => `<option ${x === p ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+        ${field("host", "Host / IP*")}${field("port", "Port", "number", 'min="1" max="65535"')}
+        ${p === "modbus" ? field("unit_id", "Unit ID", "number", 'min="0" max="255"') : ""}
+        ${p === "snmp" ? `<label class="f">SNMP version<select onchange="state.edit.snmp_version=this.value">${["1","2c"].map(x => `<option ${String(e.snmp_version) === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
+          <label class="f">Community${e.candidate_index != null && !e.community ? " (from scan)" : ""}<input type="password" value="${esc(e.community ?? "")}" placeholder="${e.candidate_index != null ? "(found by scan)" : "public"}" oninput="state.edit.community=this.value" autocomplete="off"></label>` : ""}
+        ${p === "bacnet" ? field("device_instance", "Device instance", "number") : ""}
+        ${field("scan_interval", "Interval (s)", "number", 'min="5"')}
+        <label class="f">Polling<select onchange="state.edit.enabled=this.value==='on'"><option value="on" ${e.enabled !== false ? "selected" : ""}>On</option><option value="off" ${e.enabled === false ? "selected" : ""}>Off</option></select></label>
+      </div>
+      ${p === "modbus" ? `<div class="msg inf" style="margin-top:10px">Modbus: only ONE system may poll a gateway / RS485 line. Testing or polling sends requests to the device.</div>` : ""}
+    </div>
+    <div class="card"><div class="row" style="margin-bottom:8px"><b class="grow">${(e.points || []).length} points</b>
+      <button class="s" onclick="addPoint()">+ Add point</button><button class="s" onclick="testPoints()">▶ Test all</button>
+      <button class="s" onclick="csvImport()">Import CSV</button><button class="s" onclick="csvExport()">Export CSV</button></div>
+      <div class="scroll"><table class="pts"><thead><tr>${cols.map(([, l]) => `<th>${l}</th>`).join("")}<th>Advanced (JSON)</th><th title="Entity enabled">En.</th><th>Value</th><th></th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="${cols.length + 4}" class="muted">No points - "+ Add point" or "Import CSV".</td></tr>`}</tbody></table></div>
+      <p class="muted" style="font-size:12px;margin-bottom:0">Key = unique id of the point (a-z, 0-9, _). Changing the key creates a NEW entity (history of the old one stays with the old entity). Grey values = last reading; green/red = test result.</p>
+    </div>`;
+}
+function cell(i, k, v) {
+  if (SELECTS[k]) return `<select onchange="setPt(${i}, '${k}', this.value)">${SELECTS[k].map(o => `<option ${String(v ?? (k === "data_type" ? "uint16" : k === "input_type" ? "holding" : k === "word_order" ? "abcd" : "")) === o ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+  const list = k === "device_class" ? 'list="dc-list"' : "";
+  return `<input value="${esc(v ?? "")}" ${list} onchange="setPt(${i}, '${k}', this.value)">`;
+}
+function setPt(i, k, v) { const pt = state.edit.points[i]; if (v === "") delete pt[k]; else pt[k] = v; if (k === "key") renderEditor(); }
+function setExtra(i, text) {
+  const pt = state.edit.points[i];
+  try {
+    const extra = text.trim() ? JSON.parse(text) : {};
+    for (const k of Object.keys(pt)) if (!KNOWN.has(k)) delete pt[k];
+    Object.assign(pt, extra); msg("");
+  } catch (e) { msg(`Point ${pt.key}: invalid JSON in Advanced - ${e.message}`, "err"); }
+}
+function addPoint() {
+  const pts = state.edit.points = state.edit.points || [];
+  let n = pts.length + 1; while (pts.some(p => p.key === `point_${n}`)) n++;
+  pts.push(state.edit.protocol === "modbus" ? {key: `point_${n}`, label: `Point ${n}`, address: "", input_type: "holding", data_type: "uint16"} : {key: `point_${n}`, label: `Point ${n}`});
+  renderEditor();
+}
+function dupPoint(i) { const c = JSON.parse(JSON.stringify(state.edit.points[i])); delete c.entity_id; c.key += "_copy"; state.edit.points.splice(i + 1, 0, c); renderEditor(); }
+function delPoint(i) { const pt = state.edit.points[i]; if (confirm(`Delete point "${pt.key}"? Its entity will be removed from HA when you Save.`)) { state.edit.points.splice(i, 1); renderEditor(); } }
+function payload() { const c = JSON.parse(JSON.stringify(state.edit)); delete c._isNew; delete c.points_ok; delete c.points_count; delete c.values; delete c.running; delete c.last_read; delete c.last_error; return c; }
+async function testPoints(keys) {
+  if (state.edit.protocol === "modbus" && !confirm("Send Modbus read requests to the device now?\n\nOnly do this if no other system polls the same gateway / RS485 line.")) return;
+  msg("Testing...");
+  try {
+    const res = await api("POST", "api/test", {device: payload(), keys});
+    Object.assign(state.tests, res);
+    const bad = Object.values(res).filter(r => r.error).length;
+    msg(`Test done: ${Object.keys(res).length - bad} OK, ${bad} error(s)`, bad ? "err" : "inf");
+  } catch (e) { msg(e.message, "err"); }
+  renderEditor();
+}
+async function saveDevice() {
+  const c = payload();
+  try {
+    const saved = c.id && !state.edit._isNew ? await api("PUT", `api/devices/${c.id}`, c) : await api("POST", "api/devices", c);
+    msg(`Saved "${saved.name}" - ${saved.points_count} points, applied immediately.`);
+    show("devices");
+  } catch (e) { msg(e.message, "err"); }
+}
+async function saveTemplate() {
+  const name = prompt("Template name (e.g. 'APC Smart-UPS SRT (SNMP)'):", state.edit.model || state.edit.name);
+  if (!name) return;
+  try { await api("POST", "api/templates", {device_id: state.edit.id, name}); msg(`Template "${name}" saved (saved device configuration - save the device first if you changed points).`); } catch (e) { msg(e.message, "err"); }
+}
+
+// ---------------- CSV ----------------
+function csvExport() {
+  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const lines = [CSV_COLS.join(",")].concat((state.edit.points || []).map(p => {
+    const extra = Object.fromEntries(Object.entries(p).filter(([k]) => !KNOWN.has(k)));
+    return CSV_COLS.map(c => c === "extra" ? (Object.keys(extra).length ? q(JSON.stringify(extra)) : "") : c === "enabled" ? (p.enabled === false ? "false" : "") : q(p[c])).join(",");
+  }));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + lines.join("\r\n")], {type: "text/csv"}));
+  a.download = `${(state.edit.name || "device").replace(/[^\w-]+/g, "_")}_points.csv`;
+  a.click();
+}
+function parseCsv(text) {
+  const rows = []; let row = [], cur = "", q = false;
+  text = text.replace(/^﻿/, "");
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === "," || ch === ";" || ch === "\t") { row.push(cur); cur = ""; }
+    else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+    else if (ch !== "\r") cur += ch;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+function csvImport() {
+  $("#dlg").innerHTML = `<h3 style="margin-top:0">Import points from CSV</h3>
+    <p class="muted">Paste from Excel (tab / comma / semicolon) or choose a file. First row = header. Columns: <code>${CSV_COLS.join(", ")}</code> (key required; use oid for SNMP, address for Modbus). Tip: Export CSV first to get the exact format.</p>
+    <input type="file" accept=".csv,.txt" onchange="this.files[0].text().then(t => $('#csvtext').value = t)"><br><br>
+    <textarea id="csvtext" placeholder="key,label,oid,unit&#10;battery_temp,Battery Temperature,1.3.6.1.4.1.318.1.1.1.2.2.2.0,°C"></textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><label><input type="checkbox" id="csvappend"> Append (keep existing points)</label><span class="grow"></span>
+      <button class="s" onclick="$('#dlg').close()">Cancel</button><button class="b" onclick="doCsvImport()">Import</button></div>`;
+  $("#dlg").showModal();
+}
+function doCsvImport() {
+  const rows = parseCsv($("#csvtext").value);
+  if (rows.length < 2) return alert("Need a header row + at least 1 point");
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  if (!head.includes("key")) return alert("Header must contain a 'key' column");
+  const pts = [];
+  for (const r of rows.slice(1)) {
+    const p = {};
+    head.forEach((h, i) => {
+      const v = (r[i] ?? "").trim(); if (!v) return;
+      if (h === "extra") { try { Object.assign(p, JSON.parse(v)); } catch (e) { throw new Error(`Row ${pts.length + 2}: extra is not valid JSON`); } }
+      else if (h === "enabled") { if (/^(false|0|no|off)$/i.test(v)) p.enabled = false; }
+      else p[h] = v;
+    });
+    if (p.key) pts.push(p);
+  }
+  const keep = $("#csvappend").checked ? (state.edit.points || []) : (state.edit.points || []).filter(o => pts.some(p => p.key === o.key));
+  // giữ entity_id của điểm cùng key -> không mất lịch sử
+  for (const p of pts) { const old = (state.edit.points || []).find(o => o.key === p.key); if (old && old.entity_id) p.entity_id = old.entity_id; }
+  state.edit.points = $("#csvappend").checked ? keep.concat(pts.filter(p => !keep.some(k => k.key === p.key))) : pts;
+  $("#dlg").close(); msg(`Imported ${pts.length} points - review, Test, then Save.`); renderEditor();
+}
+
+// ---------------- scan ----------------
+async function loadScan() {
+  let s; try { s = await api("GET", "api/scan"); } catch (e) { return msg(e.message, "err"); }
+  const r = s.result, set = s.settings || {};
+  const tbl = (items, kind) => items.length ? `<table><thead><tr><th>IP</th>${kind === "snmp" ? "<th>Vendor</th><th>Name</th><th>Description</th>" : "<th>Open ports</th>"}<th>Status</th></tr></thead><tbody>${items.map(d =>
+    `<tr><td>${esc(d.ip)}</td>${kind === "snmp" ? `<td>${esc(d.vendor)}</td><td>${esc(d.sys_name)}</td><td class="muted">${esc(d.sys_descr)}</td>` : `<td>${esc((d.ports_open || []).join(", "))}</td>`}
+     <td>${d.known ? `<span class="muted">configured: ${esc(d.known)}</span>` : `<span class="ok">new${d.similar_to ? " (like " + esc(d.similar_to) + ")" : ""}</span>`}</td></tr>`).join("")}</tbody></table>` : `<p class="muted">None</p>`;
+  $("#tab-scan").innerHTML = `
+    <div class="card"><div class="row"><div class="grow"><b>Scan settings</b><div class="muted" style="font-size:12px">Ranges: ${esc(set.scan_ranges)} · SNMP ${set.scan_snmp ? "on (" + esc(set.scan_snmp_version) + ")" : "off"} · Modbus TCP ${set.scan_modbus ? "on (ports " + esc(set.scan_modbus_ports) + ")" : "off"} · BACnet ${set.scan_bacnet ? "on" : "off"}<br>Change them on the Home Assistant device page "Project Collector" (Configuration).</div></div>
+      <button class="s" onclick="loadScan()">Refresh</button><button class="b" ${s.scanning ? "disabled" : ""} onclick="startScan()">${s.scanning ? "Scanning..." : "Run scan"}</button></div></div>
+    <div class="card"><b>New devices found</b> <span class="muted">(last scan${r ? " " + esc(r.started) + " · " + esc(r.summary) + " · " + r.duration_s + "s" : ": none"})</span>
+      ${s.candidates.length ? `<table style="margin-top:8px"><tbody>${s.candidates.map(c => `<tr><td>${esc(c.label)}</td><td style="text-align:right"><button class="b" onclick='addFromScan(${esc(JSON.stringify(c))})'>Create device</button></td></tr>`).join("")}</tbody></table>` : `<p class="muted">No new device. Restarting the add-on clears this list - scan again.</p>`}</div>
+    ${r ? `<div class="card"><b>SNMP</b>${tbl(r.snmp || [], "snmp")}</div><div class="card"><b>Modbus TCP</b> <span class="muted">(configured gateways skipped: ${esc((r.modbus_skipped_known || []).join(", ") || "-")})</span>${tbl(r.modbus || [], "modbus")}</div>${(r.errors || []).length ? `<div class="msg err">${esc(r.errors.join(" | "))}</div>` : ""}` : ""}`;
+  if (s.scanning) setTimeout(() => state.tab === "scan" && loadScan(), 4000);
+}
+async function startScan() { try { await api("POST", "api/scan"); msg("Scan started..."); } catch (e) { msg(e.message, "err"); } setTimeout(loadScan, 1000); }
+function addFromScan(c) {
+  const pre = {host: c.ip, port: c.port, protocol: c.protocol, name: c.sys_name && c.sys_name !== "(none)" ? c.sys_name : `Device ${c.ip}`, added_from_scan: new Date().toISOString().slice(0, 16).replace("T", " ")};
+  if (c.protocol === "snmp") { pre.snmp_version = c.version === "1" ? "1" : "2c"; if (c.has_community) pre.candidate_index = c.index; }
+  newDevice(pre);
+}
+
+// ---------------- templates ----------------
+async function loadTemplates() {
+  try { state.templates = await api("GET", "api/templates"); } catch (e) { return msg(e.message, "err"); }
+  $("#tab-templates").innerHTML = `<div class="card"><p class="muted" style="margin-top:0">Built-in templates come with the add-on. User templates are saved from a device (Edit → "Save as template") into <code>/share/project_collector/templates</code>.</p>
+    <table><thead><tr><th>Template</th><th>Protocol</th><th>Points</th><th>Type</th><th></th></tr></thead><tbody>${state.templates.map(t => `<tr>
+      <td><b>${esc(t.name)}</b><div class="muted" style="font-size:12px">${esc(t.description || "")}</div></td><td>${esc(t.protocol.toUpperCase())}</td><td>${(t.points || []).length}</td>
+      <td>${t.builtin ? "Built-in" : "User"}</td><td style="text-align:right">${t.builtin ? "" : `<button class="d" onclick="deleteTemplate('${esc(t.file)}')">Delete</button>`}</td></tr>`).join("")}</tbody></table></div>`;
+}
+async function deleteTemplate(f) { if (!confirm(`Delete template ${f}?`)) return; try { await api("DELETE", `api/templates/${encodeURIComponent(f)}`); loadTemplates(); } catch (e) { msg(e.message, "err"); } }
+
+// ---------------- start ----------------
+api("GET", "api/info").then(i => $("#meta").textContent = `site ${i.site} · v${i.version}`).catch(() => {});
+loadDevices();
+setInterval(() => { if (state.tab === "devices" && !$("#dlg").open) loadDevices(); }, 15000);
+</script>
+</body>
+</html>

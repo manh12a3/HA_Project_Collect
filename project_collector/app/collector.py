@@ -31,16 +31,20 @@ import re
 import signal
 import threading
 import time
+import types
 import urllib.request
 
 import paho.mqtt.client as mqtt
 
 from client import bacnet_read_point, format_snmp_value, modbus_read_points, snmp_get_points
 from scanner import run_scan
+from webui import start_webui
+
+WEBUI_PORT = 8099  # Ingress (config.yaml ingress_port)
 
 CONFIG_FILE = "/share/project_collector/devices.json"
 SCAN_FILE = "/share/project_collector/scan_result.json"
-VERSION = "0.5.0"
+VERSION = "0.6.0"
 OPTIONS_FILE = "/data/options.json"
 DISCOVERY_PREFIX = "homeassistant"
 
@@ -101,6 +105,10 @@ class Device:
         self.polling_cmd = f"{self.topic}/_polling/set"
         self.polling_state = f"{self.topic}/_polling/state"
         self.on_change = None  # callback lưu devices.json khi bật/tắt (gán từ main)
+        # trạng thái cho giao diện quản lý (web UI)
+        self.last_values: dict = {}
+        self.last_read = None  # thời điểm đọc xong gần nhất (epoch)
+        self.last_error = None
 
     # ---------- discovery ----------
     def publish_discovery(self, collector_status: str) -> None:
@@ -237,6 +245,8 @@ class Device:
         return last
 
     def publish_values(self, values: dict) -> None:
+        self.last_values = dict(values)
+        self.last_read = time.time()
         for p in self.points:
             key = p["key"]
             value = values.get(key)
@@ -278,6 +288,27 @@ class Device:
                 self.mq.publish(f"{self.topic}/{p['key']}/avail", "offline", qos=1, retain=True)
         self.mq.publish(self.polling_state, "ON" if on else "OFF", qos=1, retain=True)
 
+    def stop(self) -> None:
+        """Dừng luồng đọc (khi sửa / xoá thiết bị từ giao diện quản lý)."""
+        self._halt.set()
+        if self._thread:
+            self._thread.join(timeout=max(10, self.interval))
+
+    def clear_points(self, keys, topic=None, remove_entities=True) -> None:
+        """Xoá dữ liệu MQTT giữ lại (retain) của các điểm; remove_entities -> gửi discovery rỗng
+        để HA XOÁ entity (dùng khi xoá điểm / xoá thiết bị). topic = gốc topic cũ (khi đổi tên)."""
+        topic = topic or self.topic
+        for key in keys:
+            for suffix in ("", "/avail", "/attr"):
+                self.mq.publish(f"{topic}/{key}{suffix}", "", qos=1, retain=True)
+            if remove_entities:
+                self.mq.publish(f"{DISCOVERY_PREFIX}/sensor/pc_{self.id}_{key}/config", "", qos=1, retain=True)
+
+    def remove_from_ha(self) -> None:
+        self.clear_points([p["key"] for p in self.points])
+        self.mq.publish(f"{DISCOVERY_PREFIX}/switch/pc_{self.id}_polling/config", "", qos=1, retain=True)
+        self.mq.publish(self.polling_state, "", qos=1, retain=True)
+
     def _stopped(self) -> bool:
         return _stop.is_set() or self._halt.is_set()
 
@@ -293,6 +324,7 @@ class Device:
                 self.publish_values(values)
             except Exception as err:  # noqa: BLE001 - 1 vòng lỗi không làm chết luồng
                 log.error("%s: lỗi vòng đọc: %s", self.name, err)
+                self.last_error = f"{time.strftime('%H:%M:%S')} {err}"
                 self.publish_values({})
             wait = max(1.0, self.interval - (time.monotonic() - started))
             deadline = time.monotonic() + wait
@@ -307,11 +339,16 @@ def main() -> None:
     base = f"svtech/{slug(opts.get('site', 'hq'))}/{slug(opts.get('room', 'server-room'))}"
     status_topic = f"{base}/collector/status"
 
+    if not os.path.exists(CONFIG_FILE):  # cài lần đầu trên máy mới -> danh sách thiết bị rỗng
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump({"devices": []}, f)
+        log.info("Tạo mới %s (chưa có thiết bị) - thêm thiết bị trong giao diện Project Collector", CONFIG_FILE)
     try:
         with open(CONFIG_FILE, encoding="utf-8") as f:
             config = json.load(f)
-    except (OSError, ValueError) as err:
-        log.error("Không đọc được %s: %s - dừng", CONFIG_FILE, err)
+    except (OSError, ValueError) as err:  # file hỏng: KHÔNG ghi đè, để người dùng sửa / khôi phục backups/
+        log.error("Không đọc được %s: %s - dừng (bản sao lưu ở /share/project_collector/backups)", CONFIG_FILE, err)
         time.sleep(60)
         return
 
@@ -350,7 +387,7 @@ def main() -> None:
         ("scan_include_known", "switch", "Scan: Modbus include configured devices", {"icon": "mdi:alert-outline"}),
         ("scan_bacnet", "switch", "Scan: BACnet/IP", {"icon": "mdi:hvac"}),
     ]
-    defaults = {"scan_ranges": opts.get("scan_ranges", "192.168.25.0/24"), "scan_timeout": 2.0,
+    defaults = {"scan_ranges": opts.get("scan_ranges", "192.168.1.0/24"), "scan_timeout": 2.0,
                 "scan_snmp": True, "scan_snmp_communities": opts.get("scan_snmp_communities", "public"),
                 "scan_snmp_version": "auto", "scan_snmp_known_communities": True, "scan_modbus": True,
                 "scan_modbus_ports": opts.get("scan_modbus_ports", "502,10502"),
@@ -614,6 +651,290 @@ def main() -> None:
 
     add_cmds = {_add_topic(k, "set"): k for k in ("candidate", "name", "template", "unit_id", "press")}
 
+    # ---- Quản lý thiết bị cho giao diện web (Ingress) - 2026-10-02 ----
+    # Tương đương menu Configure của integration Project cũ: thêm / sửa / xoá thiết bị + điểm đo,
+    # đọc thử, mẫu thiết bị (dựng sẵn trong add-on + mẫu người dùng lưu ở /share).
+    BUILTIN_TPL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+    USER_TPL_DIR = "/share/project_collector/templates"
+    KEY_RE = re.compile(r"^[a-z0-9_]{1,60}$")
+    DEVICE_FIELDS = ("name", "model", "protocol", "host", "port", "unit_id", "community", "snmp_version",
+                     "device_instance", "scan_interval", "enabled")
+
+    def _backup_config():
+        """Giữ 10 bản devices.json gần nhất trước mỗi lần sửa từ giao diện."""
+        bdir = "/share/project_collector/backups"
+        os.makedirs(bdir, exist_ok=True)
+        try:
+            with open(CONFIG_FILE, encoding="utf-8") as f:
+                data = f.read()
+            with open(os.path.join(bdir, time.strftime("devices_%Y%m%d_%H%M%S.json")), "w", encoding="utf-8") as f:
+                f.write(data)
+        except OSError:
+            return
+        old = sorted(os.listdir(bdir))[:-10]
+        for name in old:
+            try:
+                os.remove(os.path.join(bdir, name))
+            except OSError:
+                pass
+
+    def _device_view(dev):
+        values = dev.last_values or {}
+        ok = sum(1 for p in dev.points if values.get(p["key"]) is not None)
+        return {**{k: dev.cfg.get(k) for k in ("id",) + DEVICE_FIELDS},
+                "points_count": len(dev.points), "points_ok": ok,
+                "running": bool(dev._thread and dev._thread.is_alive()),
+                "last_read": dev.last_read, "last_error": dev.last_error,
+                "added_from_scan": dev.cfg.get("added_from_scan")}
+
+    def mgr_list():
+        return [_device_view(d) for d in devices]
+
+    def mgr_get(dev_id):
+        dev = next((d for d in devices if d.id == dev_id), None)
+        if not dev:
+            raise KeyError("Device not found")
+        return {**_device_view(dev), "points": copy.deepcopy(dev.points),
+                "values": {k: (None if v is None else str(v)) for k, v in (dev.last_values or {}).items()}}
+
+    def _validate(cfg, dev_id=None):
+        name = str(cfg.get("name") or "").strip()
+        if not name:
+            raise ValueError("Device name is required")
+        if any(d.name.lower() == name.lower() and d.id != dev_id for d in devices):
+            raise ValueError(f"Device name '{name}' already exists")
+        proto = cfg.get("protocol")
+        if proto not in ("snmp", "modbus", "bacnet"):
+            raise ValueError("Protocol must be snmp, modbus or bacnet")
+        if not str(cfg.get("host") or "").strip():
+            raise ValueError("Host / IP is required")
+        keys = set()
+        for i, p in enumerate(cfg.get("points") or [], start=1):
+            key = str(p.get("key") or "").strip()
+            if not KEY_RE.match(key):
+                raise ValueError(f"Point #{i}: key must be a-z, 0-9, _ (got '{key}')")
+            if key in keys:
+                raise ValueError(f"Point key '{key}' is duplicated")
+            keys.add(key)
+            if proto == "snmp" and not str(p.get("oid") or "").strip():
+                raise ValueError(f"Point '{key}': OID is required")
+            if proto == "modbus" and str(p.get("address", "")).strip() == "":
+                raise ValueError(f"Point '{key}': register address is required")
+            if proto == "bacnet" and not (p.get("object_type") and str(p.get("object_instance", "")) != ""):
+                raise ValueError(f"Point '{key}': object type + instance are required")
+
+    def _clean_cfg(cfg, dev_id):
+        out = {k: cfg.get(k) for k in DEVICE_FIELDS}
+        out["id"] = dev_id
+        out["name"] = str(out["name"]).strip()
+        out["host"] = str(out["host"]).strip()
+        for k in ("port", "unit_id", "device_instance", "scan_interval"):
+            if out.get(k) in ("", None):
+                out[k] = None
+            else:
+                out[k] = int(float(out[k]))
+        out["port"] = out["port"] or {"snmp": 161, "modbus": 502, "bacnet": 47808}[out["protocol"]]
+        out["scan_interval"] = max(5, out["scan_interval"] or 30)
+        out["enabled"] = bool(out.get("enabled", True))
+        pts = []
+        for p in cfg.get("points") or []:
+            p = {k: v for k, v in p.items() if v not in ("", None) or k in ("enabled",)}
+            for k in ("scale", "valid_min"):
+                if k in p:
+                    p[k] = float(p[k])
+            for k in ("round", "object_instance"):
+                if k in p:
+                    p[k] = int(float(p[k]))
+            if "address" in p:
+                p["address"] = int(float(p["address"]))
+            if p.get("enabled") is not False:
+                p.pop("enabled", None)
+            pts.append(p)
+        out["points"] = pts
+        if cfg.get("added_from_scan"):
+            out["added_from_scan"] = cfg["added_from_scan"]
+        return out
+
+    def mgr_save(cfg, dev_id=None):
+        """Tạo mới (dev_id None) hoặc sửa thiết bị. Sửa: GIỮ entity_id của điểm cùng key; điểm bị xoá ->
+        xoá entity trong HA. Áp dụng ngay (dừng luồng cũ, khai báo lại, đọc lại)."""
+        cand_idx = cfg.pop("candidate_index", None)
+        if cand_idx is not None and not cfg.get("community"):
+            cfg["community"] = mgr_candidate_community(cand_idx)
+        _validate(cfg, dev_id)
+        with config_lock:
+            old = next((d for d in devices if d.id == dev_id), None) if dev_id else None
+            if dev_id and not old:
+                raise KeyError("Device not found")
+            new_id = dev_id or f"{slug(cfg['name']).replace('-', '_')}_{int(time.time()) % 1000000}"
+            new_cfg = _clean_cfg(cfg, new_id)
+            if old:
+                old_by_key = {p["key"]: p for p in old.points}
+                for p in new_cfg["points"]:  # giữ entity_id cũ -> lịch sử không đứt
+                    if p["key"] in old_by_key and old_by_key[p["key"]].get("entity_id") and not p.get("entity_id"):
+                        p["entity_id"] = old_by_key[p["key"]]["entity_id"]
+                for k in ("added_from_scan",):
+                    if old.cfg.get(k) and k not in new_cfg:
+                        new_cfg[k] = old.cfg[k]
+                old.stop()
+                removed = [k for k in old_by_key if k not in {p["key"] for p in new_cfg["points"]}]
+                if removed:
+                    old.clear_points(removed)
+            _backup_config()
+            dev = Device(new_cfg, base, mq)
+            dev.on_change = save_config
+            if old:
+                if dev.topic != old.topic:  # đổi tên -> topic mới, xoá dữ liệu retain ở topic cũ
+                    old.clear_points([p["key"] for p in old.points], remove_entities=False)
+                idx = devices.index(old)
+                devices[idx] = dev
+                cidx = next(i for i, c in enumerate(config["devices"]) if c["id"] == dev_id)
+                config["devices"][cidx] = new_cfg
+            else:
+                devices.append(dev)
+                config.setdefault("devices", []).append(new_cfg)
+            save_config()
+            dev.publish_discovery(status_topic)
+            mq.subscribe(dev.polling_cmd, qos=1)
+            dev.start()
+        publish_add_entities()  # cập nhật danh sách "copy points from"
+        log.info("Giao diện: %s thiết bị '%s' (%s điểm)", "sửa" if dev_id else "tạo", new_cfg["name"],
+                 len(new_cfg["points"]))
+        return mgr_get(new_id)
+
+    def mgr_delete(dev_id):
+        with config_lock:
+            dev = next((d for d in devices if d.id == dev_id), None)
+            if not dev:
+                raise KeyError("Device not found")
+            dev.stop()
+            dev.remove_from_ha()
+            _backup_config()
+            devices.remove(dev)
+            config["devices"] = [c for c in config["devices"] if c["id"] != dev_id]
+            save_config()
+        publish_add_entities()
+        log.info("Giao diện: xoá thiết bị '%s'", dev.name)
+
+    def mgr_polling(dev_id, on):
+        dev = next((d for d in devices if d.id == dev_id), None)
+        if not dev:
+            raise KeyError("Device not found")
+        dev.set_enabled(bool(on))
+        return _device_view(dev)
+
+    def mgr_test(cfg, keys=None):
+        """Đọc thử (KHÔNG phát MQTT, không lưu). Trả {key: {value} | {error}}."""
+        cand_idx = cfg.pop("candidate_index", None)
+        if cand_idx is not None and not cfg.get("community"):
+            cfg["community"] = mgr_candidate_community(cand_idx)
+        c = _clean_cfg({**cfg, "name": cfg.get("name") or "test"}, "test")
+        points = [p for p in c["points"] if not keys or p["key"] in keys]
+        out = {}
+        if c["protocol"] == "modbus":
+            raw = modbus_read_points(c["host"], c["port"], int(c.get("unit_id") or 1), points)
+            for p in points:
+                v = raw.get(p["key"])
+                out[p["key"]] = {"error": str(v)} if isinstance(v, Exception) else {"value": str(v)}
+        elif c["protocol"] == "snmp":
+            oids = list(dict.fromkeys(p["oid"] for p in points))
+            raw = snmp_get_points(c["host"], c["port"], c.get("community") or "public",
+                                  c.get("snmp_version") or "2c", oids)
+            for p in points:
+                v = raw.get(p["oid"])
+                try:
+                    if isinstance(v, Exception):
+                        raise v
+                    out[p["key"]] = {"value": str(format_snmp_value(p, v)), "raw": str(v)}
+                except Exception as err:  # noqa: BLE001
+                    out[p["key"]] = {"error": str(err)}
+        else:
+            for p in points:
+                try:
+                    v = asyncio.run(bacnet_read_point(c["host"], c["port"], int(c.get("device_instance") or 0),
+                                                      p["object_type"], p["object_instance"],
+                                                      p.get("property_name") or "presentValue"))
+                    out[p["key"]] = {"value": str(v)}
+                except Exception as err:  # noqa: BLE001
+                    out[p["key"]] = {"error": str(err)}
+        return out
+
+    def _read_templates(folder, builtin):
+        out = []
+        if not os.path.isdir(folder):
+            return out
+        for name in sorted(os.listdir(folder)):
+            if not name.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(folder, name), encoding="utf-8") as f:
+                    t = json.load(f)
+                t["file"] = name
+                t["builtin"] = builtin
+                out.append(t)
+            except (OSError, ValueError) as err:
+                log.warning("Mẫu %s lỗi: %s", name, err)
+        return out
+
+    def mgr_templates():
+        return _read_templates(BUILTIN_TPL_DIR, True) + _read_templates(USER_TPL_DIR, False)
+
+    def mgr_save_template(dev_id, name):
+        dev = next((d for d in devices if d.id == dev_id), None)
+        if not dev:
+            raise KeyError("Device not found")
+        name = str(name or "").strip() or dev.cfg.get("model") or dev.name
+        pts = copy.deepcopy(dev.points)
+        for p in pts:
+            p.pop("entity_id", None)
+            p.pop("enabled", None)
+        tpl = {"name": name, "protocol": dev.protocol, "model": dev.cfg.get("model") or name,
+               "description": f"Saved from device '{dev.name}' on {time.strftime('%Y-%m-%d')}",
+               "defaults": {k: dev.cfg.get(k) for k in ("port", "unit_id", "snmp_version", "scan_interval")},
+               "points": pts}
+        os.makedirs(USER_TPL_DIR, exist_ok=True)
+        fname = f"{slug(name)}.json"
+        with open(os.path.join(USER_TPL_DIR, fname), "w", encoding="utf-8") as f:
+            json.dump(tpl, f, ensure_ascii=False, indent=1)
+        return {"file": fname, "name": name}
+
+    def mgr_delete_template(fname):
+        path = os.path.join(USER_TPL_DIR, os.path.basename(fname))
+        if not os.path.isfile(path):
+            raise KeyError("Only user templates can be deleted")
+        os.remove(path)
+
+    def mgr_scan_result():
+        try:
+            with open(SCAN_FILE, encoding="utf-8") as f:
+                res = json.load(f)
+        except (OSError, ValueError):
+            res = None
+        cands = [{k: c.get(k) for k in ("label", "protocol", "ip", "port", "version", "sys_name", "similar_to")}
+                 | {"has_community": bool(c.get("community")), "index": i}
+                 for i, c in enumerate(add["candidates"])]
+        return {"result": res, "candidates": cands, "scanning": scan_lock.locked(), "settings":
+                {k: ("********" if "communit" in k and k != "scan_snmp_known_communities" else v)
+                 for k, v in settings.items()}}
+
+    def mgr_scan_start():
+        if scan_lock.locked():
+            raise ValueError("A scan is already running")
+        threading.Thread(target=do_scan, args=({},), name="scan", daemon=True).start()
+
+    def mgr_candidate_community(index):
+        """Community thật của ứng viên quét - chỉ dùng phía server khi tạo thiết bị."""
+        try:
+            return add["candidates"][int(index)].get("community")
+        except (IndexError, ValueError, TypeError):
+            return None
+
+    manager = types.SimpleNamespace(
+        list=mgr_list, get=mgr_get, save=mgr_save, delete=mgr_delete, polling=mgr_polling, test=mgr_test,
+        templates=mgr_templates, save_template=mgr_save_template, delete_template=mgr_delete_template,
+        scan_result=mgr_scan_result, scan_start=mgr_scan_start, candidate_community=mgr_candidate_community,
+        version=VERSION, site=site_id)
+
     connected_at = {"t": 0.0}
 
     setting_cmds = {_setting_topic(k, "set"): k for k, *_ in SETTING_DEFS}
@@ -678,6 +999,10 @@ def main() -> None:
 
     for d in devices:
         d.start()
+    try:
+        start_webui(manager, port=WEBUI_PORT)
+    except Exception as err:  # noqa: BLE001 - giao diện lỗi không làm dừng việc thu thập
+        log.error("Không khởi động được giao diện quản lý: %s", err)
     log.info("Đang chạy: %s thiết bị (%s đang đọc), topic gốc %s", len(devices),
              sum(1 for d in devices if d.enabled), base)
 

@@ -1,10 +1,16 @@
 name: Project Collector
-version: "0.5.0"
+version: "0.6.0"
 slug: project_collector
+# Giao diện quản lý thiết bị (thanh bên HA -> Project Collector), chỉ admin
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:lan-connect
+panel_title: Project Collector
+panel_admin: true
 description: >-
   Bộ thu thập dữ liệu thiết bị (Modbus TCP / SNMP / BACnet) gửi qua MQTT - dùng lại
   phần đọc thiết bị của integration Project. Cấu hình: /share/project_collector/devices.json
-url: https://github.com/project/ha-project
+url: https://github.com/manh12a3/HA_Project_Collect
 arch:
   - amd64
   - aarch64
@@ -21,7 +27,7 @@ options:
   log_level: info
   # Quét thiết bị: GIÁ TRỊ MẶC ĐỊNH LẦN ĐẦU - sau đó chỉnh trong HA (thiết bị "Project Collector",
   # mục Configuration: dải IP, SNMP/Modbus/BACnet bật-tắt, community, phiên bản, cổng...).
-  scan_ranges: 192.168.25.0/24
+  scan_ranges: 192.168.1.0/24
   scan_snmp_communities: public
   scan_modbus_ports: "502,10502"
   scan_bacnet: false

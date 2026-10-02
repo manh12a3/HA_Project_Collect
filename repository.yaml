@@ -1,5 +1,5 @@
 # Kho add-on Home Assistant - thêm link GitHub của repo này tại
 # Settings -> Add-ons -> Add-on store -> ⋮ -> Repositories
 name: SVTECH Server Room add-ons
-url: https://github.com/CHANGE_ME/ha-svtech-model2
+url: https://github.com/manh12a3/HA_Project_Collect
 maintainer: SVTECH

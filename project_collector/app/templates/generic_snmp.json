@@ -1,0 +1,28 @@
+{
+ "name": "Generic SNMP device (system info)",
+ "protocol": "snmp",
+ "model": "Generic SNMP",
+ "description": "Any SNMP agent: system name + uptime. Add the vendor OIDs you need afterwards.",
+ "defaults": {
+  "port": 161,
+  "unit_id": null,
+  "snmp_version": "2c",
+  "scan_interval": 60
+ },
+ "points": [
+  {
+   "key": "sys_name",
+   "label": "System Name",
+   "oid": "1.3.6.1.2.1.1.5.0"
+  },
+  {
+   "key": "uptime",
+   "label": "Uptime",
+   "oid": "1.3.6.1.2.1.1.3.0",
+   "format": "ticks_min",
+   "unit": "min",
+   "device_class": "duration",
+   "state_class": "measurement"
+  }
+ ]
+}

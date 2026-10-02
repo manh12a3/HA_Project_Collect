@@ -1,0 +1,588 @@
+{
+ "name": "APC Smart-UPS SRT (SNMP)",
+ "protocol": "snmp",
+ "model": "Smart-UPS SRT 10000",
+ "description": "APC UPS with Network Management Card (PowerNet MIB). Verified on SRT 10000: status, input 3-phase, bypass, output, battery, runtime, alarms - read-only.",
+ "defaults": {
+  "port": 161,
+  "unit_id": null,
+  "snmp_version": "1",
+  "scan_interval": 30
+ },
+ "points": [
+  {
+   "device_class": "battery",
+   "key": "battery_capacity",
+   "label": "Battery Capacity",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.2.1.0",
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "key": "output_percent_power",
+   "label": "Phase Output Percent Power",
+   "oid": "1.3.6.1.4.1.318.1.1.1.9.3.3.1.10.1.1.1",
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "format": "runtime",
+   "key": "battery_runtime_remaining",
+   "label": "Battery Runtime Remaining",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.2.3.0"
+  },
+  {
+   "device_class": "voltage",
+   "key": "input_voltage",
+   "label": "Input Voltage",
+   "oid": "1.3.6.1.4.1.318.1.1.1.3.3.1.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "voltage",
+   "key": "output_voltage",
+   "label": "Output Voltage",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.3.1.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "power",
+   "key": "output_active_power",
+   "label": "Output Active Power",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.2.8.0",
+   "state_class": "measurement",
+   "unit": "W"
+  },
+  {
+   "device_class": "current",
+   "key": "load_current",
+   "label": "Load Current",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.2.4.0",
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "device_class": "current",
+   "key": "phase_output_current",
+   "label": "Phase Output Current",
+   "oid": "1.3.6.1.4.1.318.1.1.1.9.3.3.1.4.1.1.1",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "format": "output_status",
+   "key": "output_status",
+   "label": "Output Status",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.1.1.0"
+  },
+  {
+   "format": "alarms",
+   "key": "alarms_present",
+   "label": "Alarms Present",
+   "oid": "1.3.6.1.2.1.33.1.6.1.0"
+  },
+  {
+   "key": "model",
+   "label": "Model",
+   "oid": "1.3.6.1.4.1.318.1.1.1.1.1.1.0"
+  },
+  {
+   "key": "serial_number",
+   "label": "Serial Number",
+   "oid": "1.3.6.1.4.1.318.1.1.1.1.2.3.0"
+  },
+  {
+   "key": "firmware",
+   "label": "Firmware",
+   "oid": "1.3.6.1.4.1.318.1.1.1.1.2.1.0"
+  },
+  {
+   "format": "mdy_date",
+   "key": "manufacture_date",
+   "label": "Manufacture Date",
+   "oid": "1.3.6.1.4.1.318.1.1.1.1.2.2.0"
+  },
+  {
+   "key": "ups_status",
+   "label": "UPS Status",
+   "map": {
+    "1": "Unknown",
+    "10": "Bypass (Hardware Failure)",
+    "11": "Sleeping Until Power Return",
+    "12": "Online (Smart Trim)",
+    "13": "Online (ECO)",
+    "14": "Hot Standby",
+    "15": "On Battery (Self Test)",
+    "16": "Bypass (Emergency Static)",
+    "17": "Static Bypass Standby",
+    "18": "Power Saving",
+    "19": "Spot Mode",
+    "2": "Online",
+    "20": "eConversion",
+    "3": "On Battery",
+    "4": "Online (Smart Boost)",
+    "5": "Timed Sleeping",
+    "6": "Bypass (Software)",
+    "7": "Output Off",
+    "8": "Rebooting",
+    "9": "Bypass (Switched)"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.1.1.0"
+  },
+  {
+   "bit": 4,
+   "key": "ups_online",
+   "label": "UPS Online",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0"
+  },
+  {
+   "bit": 2,
+   "key": "ups_on_battery",
+   "label": "UPS On Battery",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0"
+  },
+  {
+   "bit": [
+    12,
+    13,
+    14,
+    15,
+    16,
+    44
+   ],
+   "key": "ups_on_bypass",
+   "label": "UPS On Bypass",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0"
+  },
+  {
+   "bit": 58,
+   "key": "ups_output_off",
+   "label": "UPS Output Off",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0"
+  },
+  {
+   "bit": 9,
+   "key": "ups_overload",
+   "label": "UPS Overload",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": [
+    37,
+    38,
+    41,
+    42,
+    43,
+    45,
+    48,
+    49,
+    50,
+    56
+   ],
+   "key": "ups_fault",
+   "label": "UPS Fault",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 1,
+   "key": "abnormal_condition",
+   "label": "Abnormal Condition",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": [
+    22,
+    39,
+    40
+   ],
+   "key": "shutdown_imminent",
+   "label": "Shutdown Imminent",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 53,
+   "key": "epo_active",
+   "label": "Emergency Power Off",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 29,
+   "key": "self_test_in_progress",
+   "label": "Self-Test In Progress",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0"
+  },
+  {
+   "bit": 10,
+   "key": "calibration_in_progress",
+   "label": "Runtime Calibration In Progress",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0"
+  },
+  {
+   "key": "last_transfer_cause",
+   "label": "Last Transfer Cause",
+   "map": {
+    "1": "No Transfer",
+    "10": "Rate of Voltage Change",
+    "2": "High Line Voltage",
+    "3": "Brownout",
+    "4": "Blackout",
+    "5": "Small Momentary Sag",
+    "6": "Deep Momentary Sag",
+    "7": "Small Momentary Spike",
+    "8": "Large Momentary Spike",
+    "9": "Self Test"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.3.2.5.0"
+  },
+  {
+   "device_class": "voltage",
+   "key": "input_voltage_l1",
+   "label": "Input Voltage L1",
+   "oid": "1.3.6.1.4.1.318.1.1.1.9.2.3.1.3.1.1.1",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "voltage",
+   "key": "input_voltage_l2",
+   "label": "Input Voltage L2",
+   "oid": "1.3.6.1.4.1.318.1.1.1.9.2.3.1.3.1.1.2",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "voltage",
+   "key": "input_voltage_l3",
+   "label": "Input Voltage L3",
+   "oid": "1.3.6.1.4.1.318.1.1.1.9.2.3.1.3.1.1.3",
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "frequency",
+   "key": "input_frequency",
+   "label": "Input Frequency",
+   "oid": "1.3.6.1.4.1.318.1.1.1.3.3.4.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "Hz"
+  },
+  {
+   "device_class": "voltage",
+   "key": "bypass_voltage",
+   "label": "Bypass Voltage",
+   "oid": "1.3.6.1.4.1.318.1.1.1.3.3.6.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "frequency",
+   "key": "bypass_frequency",
+   "label": "Bypass Frequency",
+   "oid": "1.3.6.1.4.1.318.1.1.1.3.3.7.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "Hz"
+  },
+  {
+   "bit": 47,
+   "key": "bypass_input_out_of_range",
+   "label": "Bypass Input Out Of Range",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "key": "output_load",
+   "label": "Output Load",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.2.8.0",
+   "round": 1,
+   "scale": 0.01,
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "device_class": "apparent_power",
+   "key": "output_apparent_power",
+   "label": "Output Apparent Power",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.2.9.0",
+   "state_class": "measurement",
+   "unit": "VA"
+  },
+  {
+   "key": "output_load_va",
+   "label": "Output Load (VA)",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.3.3.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "device_class": "current",
+   "key": "output_current",
+   "label": "Output Current",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.3.4.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "A"
+  },
+  {
+   "device_class": "frequency",
+   "key": "output_frequency",
+   "label": "Output Frequency",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.3.2.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "Hz"
+  },
+  {
+   "key": "ups_efficiency",
+   "label": "UPS Efficiency",
+   "oid": "1.3.6.1.4.1.318.1.1.1.4.3.5.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "%",
+   "valid_min": 0
+  },
+  {
+   "key": "battery_status",
+   "label": "Battery Status",
+   "map": {
+    "1": "Unknown",
+    "2": "Normal",
+    "3": "Battery Low",
+    "4": "Battery Fault"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.1.1.0"
+  },
+  {
+   "device_class": "battery",
+   "key": "battery_charge",
+   "label": "Battery State of Charge",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.3.1.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "%"
+  },
+  {
+   "device_class": "duration",
+   "format": "ticks_min",
+   "key": "battery_runtime",
+   "label": "Runtime Remaining",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.2.3.0",
+   "state_class": "measurement",
+   "unit": "min"
+  },
+  {
+   "device_class": "duration",
+   "format": "ticks_min",
+   "key": "time_on_battery",
+   "label": "Time On Battery",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.1.2.0",
+   "state_class": "measurement",
+   "unit": "min"
+  },
+  {
+   "device_class": "voltage",
+   "key": "battery_voltage",
+   "label": "Battery Voltage",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.3.7.1.3.1",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "voltage",
+   "key": "battery_voltage_negative",
+   "label": "Battery Voltage (Negative)",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.3.7.1.3.2",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "V"
+  },
+  {
+   "device_class": "temperature",
+   "key": "battery_temperature",
+   "label": "Battery Temperature",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.3.2.0",
+   "round": 1,
+   "scale": 0.1,
+   "state_class": "measurement",
+   "unit": "°C"
+  },
+  {
+   "key": "battery_packs",
+   "label": "External Battery Packs",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.2.5.0"
+  },
+  {
+   "format": "mdy_date",
+   "key": "battery_install_date",
+   "label": "Battery Installation Date",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.1.3.0"
+  },
+  {
+   "format": "mdy_date",
+   "key": "battery_replacement_date",
+   "label": "Battery Replacement Date",
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.2.21.0"
+  },
+  {
+   "key": "battery_replace_indicator",
+   "label": "Battery Replace Indicator",
+   "map": {
+    "1": "No Replacement Needed",
+    "2": "Replace Battery"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.2.2.4.0"
+  },
+  {
+   "bit": 3,
+   "key": "low_battery",
+   "label": "Low Battery",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 5,
+   "key": "battery_needs_replacement",
+   "label": "Battery Needs Replacement",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 33,
+   "key": "battery_disconnected",
+   "label": "No Battery Attached",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 25,
+   "key": "battery_charger_fault",
+   "label": "Battery Charger Fault",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": [
+    26,
+    27
+   ],
+   "key": "battery_overtemperature_warning",
+   "label": "Battery Overtemperature Warning",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 28,
+   "key": "battery_overtemperature_critical",
+   "label": "Battery Overtemperature Critical",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 46,
+   "key": "battery_temperature_sensor_fault",
+   "label": "Battery Temperature Sensor Fault",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "bit": 21,
+   "key": "battery_communication_lost",
+   "label": "Battery Communication Lost",
+   "off": "Normal",
+   "oid": "1.3.6.1.4.1.318.1.1.1.11.1.1.0",
+   "on": "Fault"
+  },
+  {
+   "key": "self_test_schedule",
+   "label": "Automatic Self-Test Schedule",
+   "map": {
+    "1": "Unknown",
+    "10": "Every 8 Weeks",
+    "11": "Every 26 Weeks",
+    "12": "Every 52 Weeks",
+    "2": "Biweekly",
+    "3": "Weekly",
+    "4": "At Turn On",
+    "5": "Never",
+    "6": "Every 4 Weeks",
+    "7": "Every 12 Weeks",
+    "8": "Biweekly Since Last Test",
+    "9": "Weekly Since Last Test"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.7.2.1.0"
+  },
+  {
+   "key": "last_self_test_result",
+   "label": "Last Self-Test Result",
+   "map": {
+    "1": "OK",
+    "2": "Failed",
+    "3": "Invalid Test",
+    "4": "Test In Progress"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.7.2.3.0"
+  },
+  {
+   "format": "mdy_date",
+   "key": "last_self_test_date",
+   "label": "Last Self-Test Date",
+   "oid": "1.3.6.1.4.1.318.1.1.1.7.2.4.0"
+  },
+  {
+   "key": "calibration_result",
+   "label": "Runtime Calibration Result",
+   "map": {
+    "1": "OK",
+    "2": "Invalid Calibration",
+    "3": "Calibration In Progress"
+   },
+   "oid": "1.3.6.1.4.1.318.1.1.1.7.2.6.0"
+  },
+  {
+   "format": "mdy_date",
+   "key": "calibration_date",
+   "label": "Runtime Calibration Date",
+   "oid": "1.3.6.1.4.1.318.1.1.1.7.2.7.0"
+  }
+ ]
+}
