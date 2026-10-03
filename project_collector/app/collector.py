@@ -44,8 +44,17 @@ WEBUI_PORT = 8099  # Ingress (config.yaml ingress_port)
 
 CONFIG_FILE = "/share/project_collector/devices.json"
 SCAN_FILE = "/share/project_collector/scan_result.json"
-VERSION = "0.6.0"
-OPTIONS_FILE = "/data/options.json"
+VERSION = "0.7.0"
+OPTIONS_FILE = os.environ.get("PC_OPTIONS_FILE", "/data/options.json")
+# Chạy độc lập (Docker trên Linux, không có Supervisor của HA) - 2026-10-03, bản 0.7.0:
+# broker lấy từ MQTT_HOST/..., tuỳ chọn từ biến môi trường, giao diện có mật khẩu (WEBUI_PASSWORD).
+STANDALONE = not os.environ.get("SUPERVISOR_TOKEN")
+# biến môi trường -> khoá tuỳ chọn (đè lên options.json nếu có)
+ENV_OPTIONS = {
+    "SITE": "site", "ROOM": "room", "LOG_LEVEL": "log_level", "SCAN_RANGES": "scan_ranges",
+    "SCAN_SNMP_COMMUNITIES": "scan_snmp_communities", "SCAN_MODBUS_PORTS": "scan_modbus_ports",
+    "SCAN_BACNET": "scan_bacnet", "SCAN_INCLUDE_KNOWN": "scan_include_known",
+}
 DISCOVERY_PREFIX = "homeassistant"
 
 # --- giống coordinator.py của integration Project ---
@@ -67,13 +76,26 @@ def slug(text: str) -> str:
 def load_options() -> dict:
     try:
         with open(OPTIONS_FILE, encoding="utf-8") as f:
-            return json.load(f)
+            opts = json.load(f)
     except (OSError, ValueError):
-        return {}
+        opts = {}
+    for env, key in ENV_OPTIONS.items():
+        val = os.environ.get(env)
+        if val is None or val == "":
+            continue
+        if key in ("scan_bacnet", "scan_include_known"):
+            val = val.strip().lower() in ("1", "true", "yes", "on")
+        opts[key] = val
+    return opts
 
 
 def mqtt_service() -> dict:
-    """Lấy thông tin broker từ Supervisor (services: mqtt:need)."""
+    """Thông tin broker: từ Supervisor (add-on HA, services: mqtt:need) hoặc biến môi trường (Docker)."""
+    if STANDALONE:
+        return {"host": os.environ.get("MQTT_HOST", "127.0.0.1"),
+                "port": int(os.environ.get("MQTT_PORT", "1883")),
+                "username": os.environ.get("MQTT_USERNAME") or None,
+                "password": os.environ.get("MQTT_PASSWORD") or None}
     token = os.environ.get("SUPERVISOR_TOKEN", "")
     req = urllib.request.Request("http://supervisor/services/mqtt",
                                  headers={"Authorization": f"Bearer {token}"})
@@ -1000,10 +1022,15 @@ def main() -> None:
     for d in devices:
         d.start()
     try:
-        start_webui(manager, port=WEBUI_PORT)
+        if STANDALONE:
+            start_webui(manager, port=int(os.environ.get("WEBUI_PORT", WEBUI_PORT)),
+                        password=os.environ.get("WEBUI_PASSWORD") or None, standalone=True)
+        else:
+            start_webui(manager, port=WEBUI_PORT)
     except Exception as err:  # noqa: BLE001 - giao diện lỗi không làm dừng việc thu thập
         log.error("Không khởi động được giao diện quản lý: %s", err)
-    log.info("Đang chạy: %s thiết bị (%s đang đọc), topic gốc %s", len(devices),
+    log.info("Đang chạy (%s): %s thiết bị (%s đang đọc), topic gốc %s",
+             "Docker độc lập" if STANDALONE else "add-on HA", len(devices),
              sum(1 for d in devices if d.enabled), base)
 
     def _shutdown(*_):

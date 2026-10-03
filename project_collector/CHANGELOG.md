@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 – 2026-10-03
+- **Chạy độc lập bằng Docker** cho site không có Home Assistant (máy Linux tại site, gửi về
+  Mosquitto trung tâm qua bridge): broker lấy từ biến môi trường `MQTT_HOST` / `MQTT_PORT` /
+  `MQTT_USERNAME` / `MQTT_PASSWORD`, tuỳ chọn từ `SITE` / `ROOM` / `SCAN_RANGES`...; giao diện quản lý
+  `http://<ip>:8099` bắt buộc đăng nhập (user `admin`, `WEBUI_PASSWORD`).
+- Script cài 1 lệnh `standalone/install-site.sh` (Docker + Mosquitto + bridge + collector, `--update`,
+  `--uninstall`).
+- Chạy như add-on HA: **không thay đổi** (MQTT từ Supervisor, giao diện qua Ingress).
+
 ## 0.6.0 – 2026-10-02
 - Giao diện quản lý thiết bị (Ingress, thanh bên HA → Project Collector, chỉ admin):
   thêm / sửa / xoá thiết bị, IP / cổng / unit ID / community / chu kỳ, bảng điểm đo

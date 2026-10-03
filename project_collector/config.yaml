@@ -1,5 +1,5 @@
 name: Project Collector
-version: "0.6.0"
+version: "0.7.0"
 slug: project_collector
 # Giao diện quản lý thiết bị (thanh bên HA -> Project Collector), chỉ admin
 ingress: true

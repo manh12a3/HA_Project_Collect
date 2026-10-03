@@ -3,9 +3,15 @@
 Tương đương menu Configure của integration Project cũ: danh sách thiết bị, thêm / sửa / xoá thiết bị,
 bảng điểm đo (OID / thanh ghi...), đọc thử, mẫu thiết bị, quét. Chỉ nhận kết nối từ Ingress của HA
 (172.30.32.2) -> chỉ người đã đăng nhập HA (admin, panel_admin) mới mở được.
+
+Chạy độc lập (Docker, 0.7.0): không có Ingress -> mọi máy trong mạng mở được http://<ip>:8099 nhưng
+BẮT BUỘC đăng nhập (HTTP Basic, user "admin", mật khẩu WEBUI_PASSWORD). Không đặt mật khẩu -> chỉ
+nhận 127.0.0.1 (vd qua SSH tunnel).
 """
 from __future__ import annotations
 
+import base64
+import hmac
 import json
 import logging
 import os
@@ -18,7 +24,17 @@ WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 ALLOWED_CLIENTS = ("172.30.32.2", "127.0.0.1")
 
 
-def start_webui(manager, port=8099):
+def _basic_ok(header: str | None, password: str) -> bool:
+    if not header or not header.startswith("Basic "):
+        return False
+    try:
+        user, _, pw = base64.b64decode(header[6:]).decode("utf-8").partition(":")
+    except (ValueError, UnicodeDecodeError):
+        return False
+    return hmac.compare_digest(user, "admin") & hmac.compare_digest(pw, password)
+
+
+def start_webui(manager, port=8099, password=None, standalone=False):
     class Handler(BaseHTTPRequestHandler):
         server_version = "ProjectCollector"
 
@@ -42,6 +58,19 @@ def start_webui(manager, port=8099):
             return json.loads(self.rfile.read(n).decode("utf-8") or "{}")
 
         def _allowed(self):
+            if standalone:
+                if password:
+                    if _basic_ok(self.headers.get("Authorization"), password):
+                        return True
+                    self.send_response(401)
+                    self.send_header("WWW-Authenticate", 'Basic realm="Project Collector", charset="UTF-8"')
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return False
+                if self.client_address[0] == "127.0.0.1":
+                    return True
+                self._send(403, {"error": "Set WEBUI_PASSWORD to allow access from the network"})
+                return False
             if self.client_address[0] in ALLOWED_CLIENTS:
                 return True
             self._send(403, {"error": "Only via Home Assistant (Ingress)"})
@@ -118,5 +147,10 @@ def start_webui(manager, port=8099):
     server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, name="webui", daemon=True).start()
-    log.info("Giao diện quản lý: cổng %s (Ingress)", port)
+    if not standalone:
+        log.info("Giao diện quản lý: cổng %s (Ingress)", port)
+    elif password:
+        log.info("Giao diện quản lý: http://<IP máy>:%s (user admin + WEBUI_PASSWORD)", port)
+    else:
+        log.warning("Giao diện quản lý: cổng %s CHỈ mở từ 127.0.0.1 (chưa đặt WEBUI_PASSWORD)", port)
     return server

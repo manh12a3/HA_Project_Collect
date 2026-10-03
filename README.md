@@ -40,6 +40,38 @@ ZTE ZXDU68 rectifier (SNMP), Power meter 3-phase (Modbus TCP, 16 điểm), Delta
 Tuỳ chọn quét và nút quét nhanh cũng có trên trang thiết bị **Project Collector <SITE>** trong
 Settings → Devices & services → MQTT.
 
+## Site không có Home Assistant – chạy độc lập bằng Docker (từ 0.7.0)
+Dùng cho site / phòng máy mới: 1 máy **Ubuntu 22.04 / 24.04** tại site chạy Project Collector +
+Mosquitto, **bridge** về Mosquitto của HA trung tâm. Entity của site tự xuất hiện trên HA trung tâm.
+
+```
+Thiết bị site ──► Project Collector (Docker) ──► Mosquitto site ══bridge══► Mosquitto trung tâm ──► HA
+```
+
+1. **Trên HA trung tâm:** Settings → Add-ons → **Mosquitto broker** → Configuration → `logins`, thêm
+   tài khoản cho site (vd `bridge_site_02` + mật khẩu) → Save → Restart add-on.
+2. **Trên máy Ubuntu tại site:**
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/manh12a3/HA_Project_Collect/main/standalone/install-site.sh -o install-site.sh
+   sudo bash install-site.sh
+   ```
+   Script hỏi: mã site (vd `SITE_02`), phòng, IP Mosquitto trung tâm, tài khoản + mật khẩu bridge,
+   mật khẩu giao diện. Tự cài Docker, tạo `/opt/svtech/`, chạy Mosquitto (chỉ nghe máy này) + bridge
+   (`homeassistant/# out`, `svtech/<site>/# both`) + Project Collector. Máy đã có Mosquitto riêng →
+   script dùng luôn và in 2 dòng topic cần thêm vào bridge.
+3. Mở `http://<IP máy site>:8099` (user `admin`) → thêm thiết bị như trong HA.
+   **Đặt tên thiết bị có tiền tố site** (vd `SITE_02 UPS A`) để entity_id không trùng site khác.
+
+| Lệnh | Việc |
+|---|---|
+| `sudo bash install-site.sh --update` | Lấy bản mới từ GitHub + build lại, giữ cấu hình và thiết bị |
+| `sudo bash install-site.sh --uninstall` | Gỡ container, giữ `/opt/svtech/data` |
+| `cd /opt/svtech && sudo docker compose logs -f collector` | Xem log |
+| `sudo grep WEBUI_PASSWORD /opt/svtech/.env` | Xem mật khẩu giao diện |
+
+Dữ liệu: `/opt/svtech/data` (= `/share/project_collector` của add-on: `devices.json`, `backups/`,
+`templates/`). Giao diện qua HTTP thường – chỉ mở cổng 8099 cho mạng quản trị.
+
 ## Lưu ý
 - **Một thiết bị chỉ một bộ đọc; một gateway / đường RS485 chỉ một master.** Hai hệ thống cùng hỏi
   Modbus qua một gateway → lỗi, giá trị rác. Giao diện hỏi xác nhận trước khi Test / bật Polling Modbus.
@@ -63,4 +95,5 @@ project_collector/
   app/webui.py, app/web/        giao diện quản lý (Ingress)
   app/templates/*.json          mẫu thiết bị dựng sẵn
   tools/export_from_ha.py       chuyển cấu hình từ integration Project cũ
+standalone/install-site.sh      cài chạy độc lập (Docker) cho site không có Home Assistant
 ```
